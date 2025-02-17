@@ -22,7 +22,7 @@ export interface CouchbaseResponse {
     results?: Array<any>; // Array of result objects (if any)
 }
 
-export interface CouchbaseDBConstructorType {
+export interface CouchbaseUtilsClientConstructorType {
     connStr: string;
     username: string;
     password: string;
@@ -39,7 +39,7 @@ export default class CouchbaseUtilsClient {
     private readonly scopeName: string
     private readonly axiosInstanceWithToken: AxiosInstance
 
-    constructor (data: CouchbaseDBConstructorType) {
+    constructor (data: CouchbaseUtilsClientConstructorType) {
         this.connStr = data.connStr
         this.username = data.username
         this.password = data.password

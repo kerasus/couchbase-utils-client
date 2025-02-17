@@ -1,2 +1,4 @@
-export { default as CouchbaseUtilsClient } from './CouchbaseUtilsClient';
-export * from './CouchbaseUtilsClient'; // optionally re-export interfaces if needed
+import CouchbaseUtilsClient from './CouchbaseUtilsClient'
+export * from './CouchbaseUtilsClient' // Re-export interfaces, types, and other exports
+export default CouchbaseUtilsClient
+
