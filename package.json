@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/yourusername/couchbase-db.git"
+    "url": "git+https://github.com/kerasus/couchbase-utils-client"
   },
   "publishConfig": {
     "registry": "https://repo.asredanesh.com/repository/npm-hosted/"
@@ -21,7 +21,7 @@
     {
       "name": "Ali Esmaeeli",
       "email": "aliesmaeeli20@gmail.com",
-      "url": "https://github.com/kerasus/quasar-form-builder"
+      "url": "https://github.com/kerasus/couchbase-utils-client"
     }
   ],
   "license": "MIT",
