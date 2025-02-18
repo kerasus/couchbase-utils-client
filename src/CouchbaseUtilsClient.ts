@@ -107,6 +107,16 @@ export default class CouchbaseUtilsClient {
     }
 
     /**
+     * Executes a raw N1QL query statement.
+     * @param statement - The raw N1QL query statement to execute.
+     * @returns The results from the CouchbaseResponse.
+     * @throws Error if the request fails or the CouchbaseResponse contains errors.
+     */
+    async query(statement: string): Promise<any> {
+        return this.sendRequest(statement);
+    }
+
+    /**
      * Creates a collection by sending the N1QL query in the POST body.
      * @param collectionName The fully qualified collection name (e.g., "`user_config`.`111`.`i18n`").
      * @returns The result of the create collection operation.
