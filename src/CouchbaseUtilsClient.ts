@@ -28,7 +28,7 @@ export interface CouchbaseUtilsClientConstructorType {
     password: string;
     bucketName: string;
     scopeName: string;
-    axiosInstanceWithToken: AxiosInstance;
+    axiosInstance: AxiosInstance;
 }
 
 export default class CouchbaseUtilsClient {
@@ -37,7 +37,7 @@ export default class CouchbaseUtilsClient {
     private readonly password: string
     private readonly bucketName: string
     private readonly scopeName: string
-    private readonly axiosInstanceWithToken: AxiosInstance
+    private readonly axiosInstance: AxiosInstance
 
     constructor (data: CouchbaseUtilsClientConstructorType) {
         this.connStr = data.connStr
@@ -45,7 +45,7 @@ export default class CouchbaseUtilsClient {
         this.password = data.password
         this.bucketName = data.bucketName
         this.scopeName = data.scopeName
-        this.axiosInstanceWithToken = data.axiosInstanceWithToken
+        this.axiosInstance = data.axiosInstance
     }
 
     /**
@@ -84,7 +84,7 @@ export default class CouchbaseUtilsClient {
         const endpoint = `${this.connStr}/query/service`
 
         try {
-            const response: AxiosResponse<CouchbaseResponse> = await this.axiosInstanceWithToken.post(
+            const response: AxiosResponse<CouchbaseResponse> = await this.axiosInstance.post(
                 endpoint,
                 requestBody,
                 {
