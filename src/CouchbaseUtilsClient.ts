@@ -1,5 +1,11 @@
 import type { AxiosInstance, AxiosResponse } from 'axios'
 
+export interface CouchbaseResponseError {
+    code: number; // Error code
+    msg: string; // Error message
+    reason?: { scope: string; collection?: string }; // Reason for the error (optional, could include scope and collection)
+}
+
 export interface CouchbaseResponse {
     requestID: string; // Unique identifier for the request
     status: string; // Status of the query (e.g., "success", "fatal")
@@ -11,10 +17,7 @@ export interface CouchbaseResponse {
         errorCount?: number; // Number of errors encountered (optional)
         warningCount?: number; // Number of warnings (optional)
     };
-    errors?: Array<{
-        code: number; // Error code
-        msg: string; // Error message
-    }>;
+    errors?: Array<CouchbaseResponseError>;
     warnings?: Array<{
         code: number; // Warning code
         msg: string; // Warning message
@@ -120,6 +123,17 @@ export default class CouchbaseUtilsClient {
     }
 
     /**
+     * Creates a scope by sending the N1QL query in the POST body.
+     * @param scopeName The name of the scope to be created within the bucket (e.g., "`user_config`").
+     * @returns The result of the create scope operation.
+     * @throws Error if the operation fails.
+     */
+    async createScope (scopeName: string): Promise<any> {
+        const query = `CREATE SCOPE \`${this.bucketName}\`.\`${scopeName}\`;`
+        return this.sendRequest(query)
+    }
+
+    /**
      * Creates a collection by sending the N1QL query in the POST body.
      * @param collectionName The fully qualified collection name (e.g., "`user_config`.`111`.`i18n`").
      * @returns The result of the create collection operation.
@@ -185,5 +199,114 @@ export default class CouchbaseUtilsClient {
         }
 
         return nestedValue as T
+    }
+
+    /**
+     * Checks for specific errors in the provided Couchbase response data and
+     * attempts to handle them by invoking respective error handling methods.
+     *
+     * This method looks for errors in the response data, specifically scope errors
+     * (code 12021) and collection errors (code 12003). If such errors are found,
+     * it delegates the handling of these errors to appropriate helper methods
+     * (`handleScopeError` and `handleCollectionError`).
+     *
+     * @param errorData The Couchbase response object containing an `errors`
+     *                  array with error details.
+     * @returns A promise that resolves once the errors are handled or no relevant
+     *          errors are found. If errors are present, the function attempts to
+     *          handle them asynchronously.
+     */
+    async checkError (errorData: CouchbaseResponse): Promise<void> {
+        if (!errorData || !errorData.errors) {
+            return
+        }
+
+        // Handle Scope Error
+        const scopeError = errorData.errors.find((err: any) => err.code === 12021)
+        if (scopeError) {
+            await this.handleScopeError(scopeError)
+        }
+
+        // Handle Collection Error
+        const collectionError = errorData.errors.find((err: any) => err.code === 12003)
+        if (collectionError) {
+            await this.handleCollectionError(collectionError)
+        }
+    }
+
+    /**
+     * Handles the error related to a scope creation failure by extracting and validating the scope name,
+     * then attempting to create the scope if necessary.
+     * @param scopeError The error response from Couchbase, typically containing information about the scope failure.
+     * @returns void
+     * @throws Error if the scope format is invalid or if the error does not contain necessary information.
+     */
+    async handleScopeError (scopeError: CouchbaseResponseError): Promise<void> {
+        try {
+            const reason = scopeError.reason
+
+            // Ensure reason and scope are available in the error
+            if (!reason || !reason.scope) {
+                throw new Error(`Invalid scopeError: Missing scope in reason: ${JSON.stringify(scopeError)}`)
+            }
+
+            const scopeNameWithPrefix = reason.scope
+            const match = scopeNameWithPrefix.match(/^default:([^.]+)\.(.+)$/)
+
+            // Validate scope format (should be "default:{bucketName}.{scopeName}")
+            if (!match) {
+                throw new Error(`Invalid scope format: ${scopeNameWithPrefix}`)
+            }
+
+            const scopeName = match[2]
+
+            // If no valid scope name is extracted, exit the method
+            if (!scopeName) {
+                return
+            }
+
+            await this.createScope(scopeName)
+        } catch (createScopeError) {
+            console.error('Failed to create scope:', createScopeError)
+            // Re-throw the error for further handling or propagation
+            throw createScopeError
+        }
+    }
+
+    /**
+     * Handles errors related to missing collections by extracting the collection name
+     * from the error message and attempting to create the collection.
+     *
+     * This method parses the error message to extract the collection name. If the
+     * message format is invalid or the collection name is missing, an error is thrown.
+     * If the collection creation fails, the error is rethrown after logging the issue.
+     *
+     * @param collectionError An object containing the error `code` and `msg`
+     *                        from the Couchbase error response.
+     * @throws Error if the error message is malformed or if the collection
+     *               creation fails.
+     * @returns A promise that resolves when the collection is successfully created,
+     *          or an error is thrown if creation fails.
+     */
+    async handleCollectionError (collectionError: { code: number, msg: string }): Promise<void> {
+        try {
+            // Extract collectionName from the error message
+            const match = collectionError.msg.match(/Keyspace not found in CB datastore: default:([^\.]+)\.([^\.]+)\.([^\s\(]+)/)
+
+            if (!match) {
+                throw new Error(`Invalid keyspace format in error message: ${collectionError.msg}`)
+            }
+
+            const collectionName = match[3]
+
+            if (!collectionName) {
+                throw new Error('Missing collectionName to create collection.')
+            }
+
+            await this.createCollection(collectionName)
+        } catch (createCollectionError) {
+            console.error('Failed to create collection:', createCollectionError)
+            throw createCollectionError
+        }
     }
 }
