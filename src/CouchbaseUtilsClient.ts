@@ -97,11 +97,14 @@ export default class CouchbaseUtilsClient {
             )
 
             return this.getCouchbaseResponse(response)
-        } catch (error) {
-            if (error instanceof Error) {
-                throw new Error(`An error occurred during the request: ${error.message}`)
+        } catch (error: any) {
+            if (error.response && error.response.data) {
+                console.error('Couchbase query error:', error.response.data);
+                throw error.response.data; // Throw the entire error object for further analysis
+            } else if (error instanceof Error) {
+                throw new Error(`An error occurred during the request: ${error.message}`);
             } else {
-                throw new Error('An unknown error occurred during the request.')
+                throw new Error('An unknown error occurred during the request.');
             }
         }
     }
