@@ -29,7 +29,7 @@ Constructor to initialize the CouchbaseDB instance with the provided configurati
     - `password`: The Couchbase password.
     - `bucketName`: The name of the Couchbase bucket.
     - `scopeName`: The name of the Couchbase scope.
-    - `axiosInstanceWithToken`: An Axios instance configured with the necessary authentication token.
+    - `axiosInstance`: An Axios instance configured with the necessary authentication token.
 
 ---
 
@@ -90,7 +90,7 @@ const config = {
   password: 'your-password',
   bucketName: 'your-bucket-name',
   scopeName: 'your-scope-name',
-  axiosInstanceWithToken: axios.create({
+  axiosInstance: axios.create({
     // Configure your Axios instance here
   }),
 };
