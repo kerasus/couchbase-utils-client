@@ -164,6 +164,41 @@ export default class CouchbaseUtilsClient {
     }
 
     /**
+     * Updates a nested field inside a document in Couchbase using N1QL.
+     *
+     * @param {string} collectionName - The name of the collection containing the document.
+     * @param {string} documentId - The unique ID of the document to update.
+     * @param {string} fieldPath - The dot-separated path to the nested field (e.g., "user.profile.age").
+     * @param {any} newValue - The new value to set for the specified nested field.
+     * @returns {Promise<void>} - Resolves when the update is successful.
+     * @throws {Error} - Throws an error if the document ID is missing or if the query execution fails.
+     *
+     * @example
+     * await couchbaseClient.updateNestedValue(
+     *   'users',
+     *   'user123',
+     *   'profile.age',
+     *   30
+     * );
+     * // This updates the document with ID "user123",
+     * // setting the "profile.age" field to 30.
+     */
+    async updateNestedValue (
+        collectionName: string,
+        documentId: string,
+        fieldPath: string,
+        newValue: any
+    ): Promise<void> {
+        if (!documentId) {
+            throw new Error('Document ID must be provided.')
+        }
+        const valueString = JSON.stringify(newValue)
+        const queryN1QL = `UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\` SET ${fieldPath} = ${valueString} WHERE META().id = "${documentId}";`
+
+        await this.sendRequest(queryN1QL)
+    }
+
+    /**
      * Retrieves a document by its ID from the specified collection.
      * @param collectionName - The fully qualified collection name (e.g., "`user_config`.`111`.`i18n`").
      * @param documentId - The ID of the document to retrieve.
