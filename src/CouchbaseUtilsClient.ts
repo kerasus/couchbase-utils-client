@@ -199,6 +199,17 @@ export default class CouchbaseUtilsClient {
     }
 
     /**
+     * Retrieves all documents from the specified collection.
+     * @param collectionName - The name of the collection to retrieve documents from.
+     * @returns An array of documents from the specified collection.
+     * @throws Error if the retrieval operation fails.
+     */
+    async getAll (collectionName: string): Promise<any> {
+        const queryN1QL = `SELECT * FROM \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`;`
+        return this.sendRequest(queryN1QL)
+    }
+
+    /**
      * Retrieves a document by its ID from the specified collection.
      * @param collectionName - The fully qualified collection name (e.g., "`user_config`.`111`.`i18n`").
      * @param documentId - The ID of the document to retrieve.
