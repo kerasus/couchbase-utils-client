@@ -248,6 +248,18 @@ export default class CouchbaseUtilsClient {
     }
 
     /**
+     * Deletes a document from the specified collection by its ID.
+     * @param collectionName - The name of the collection from which to delete the document.
+     * @param documentId - The ID of the document to delete.
+     * @returns A Promise that resolves with the result of the deletion operation.
+     * @throws Error if the deletion operation fails, such as if the document does not exist.
+     */
+    async delete (collectionName: string, documentId: string): Promise<any> {
+        const queryN1QL = `DELETE FROM \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\` USE KEYS "${documentId}";`
+        return this.sendRequest(queryN1QL)
+    }
+
+    /**
      * Checks for specific errors in the provided Couchbase response data and
      * attempts to handle them by invoking respective error handling methods.
      *
