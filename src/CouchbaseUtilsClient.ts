@@ -201,13 +201,23 @@ export default class CouchbaseUtilsClient {
         const topLevelField = pathParts[0]; // The top-level field (e.g., "user")
         const nestedFieldPath = pathParts.slice(1).join('.'); // The remaining nested path (e.g., "profile.age")
 
-        // Construct the N1QL query using OBJECT_PUT for dynamic updates
-        const queryN1QL = `
-        UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
-        USE KEYS "${documentId}"
-        SET \`${topLevelField}\` = IFMISSINGORNULL(\`${topLevelField}\`, {}),
-            \`${topLevelField}\` = OBJECT_PUT(\`${topLevelField}\`, "${nestedFieldPath}", ${valueString});
-    `;
+        let queryN1QL: string;
+        if (nestedFieldPath) {
+            // Nested field case
+            queryN1QL = `
+            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+            USE KEYS "${documentId}"
+            SET \`${topLevelField}\` = IFMISSINGORNULL(\`${topLevelField}\`, {}),
+                \`${topLevelField}\` = OBJECT_PUT(\`${topLevelField}\`, "${nestedFieldPath}", ${valueString});
+            `;
+        } else {
+            // Top-level field case
+            queryN1QL = `
+            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+            USE KEYS "${documentId}"
+            SET \`${topLevelField}\` = ${valueString};
+            `;
+        }
 
         // Execute the query
         await this.sendRequest(queryN1QL);
