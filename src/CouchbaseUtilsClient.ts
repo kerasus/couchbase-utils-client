@@ -193,7 +193,12 @@ export default class CouchbaseUtilsClient {
             throw new Error('Document ID must be provided.')
         }
         const valueString = JSON.stringify(newValue)
-        const queryN1QL = `UPSERT INTO \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`  (KEY, VALUE) VALUES ("${documentId}", {"${fieldPath}": ${valueString}});`
+
+        const queryN1QL = `
+            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+                USE KEYS "${documentId}"
+            SET \`${fieldPath.replace(/\./g, '\`.\`')}\` = ${valueString};
+        `;
 
         await this.sendRequest(queryN1QL)
     }
