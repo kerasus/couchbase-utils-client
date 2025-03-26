@@ -207,7 +207,7 @@ export default class CouchbaseUtilsClient {
             queryN1QL = `
             UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
             USE KEYS "${documentId}"
-            SET \`${topLevelField}\` = IFMISSINGORNULL(\`${topLevelField}\`, {}),
+            SET \`${topLevelField}\` = IFMISSINGORNULL(OBJECT_CONSTRUCT(\`${topLevelField}\`), {}),
                 \`${topLevelField}\` = OBJECT_PUT(\`${topLevelField}\`, "${nestedFieldPath}", ${valueString});
             `;
         } else {
