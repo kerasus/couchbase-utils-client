@@ -183,44 +183,25 @@ export default class CouchbaseUtilsClient {
      * // This updates the document with ID "user123",
      * // setting the "profile.age" field to 30.
      */
-    async updateNestedValue(
+    async updateNestedValue (
         collectionName: string,
         documentId: string,
-        fieldPath: string,
+        fieldPath: string, // example: watch_lists.`دیدبان ۱`
         newValue: any
     ): Promise<void> {
         if (!documentId) {
-            throw new Error('Document ID must be provided.');
+            throw new Error('Document ID must be provided.')
         }
+        const valueString = JSON.stringify(newValue)
 
-        // Serialize the new value to JSON
-        const valueString = JSON.stringify(newValue);
 
-        // Split the field path into parts (e.g., "user.profile.age" -> ["user", "profile", "age"])
-        const pathParts = fieldPath.split('.');
-        const topLevelField = pathParts[0]; // The top-level field (e.g., "user")
-        const nestedFieldPath = pathParts.slice(1).join('.'); // The remaining nested path (e.g., "profile.age")
-
-        let queryN1QL: string;
-        if (nestedFieldPath) {
-            // Nested field case
-            queryN1QL = `
+        const queryN1QL = `
             UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
-            USE KEYS "${documentId}"
-            SET \`${topLevelField}\` = IFMISSINGORNULL(OBJECT_CONSTRUCT(\`${topLevelField}\`), {}),
-                \`${topLevelField}\` = OBJECT_PUT(\`${topLevelField}\`, "${nestedFieldPath}", ${valueString});
-            `;
-        } else {
-            // Top-level field case
-            queryN1QL = `
-            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
-            USE KEYS "${documentId}"
-            SET \`${topLevelField}\` = ${valueString};
-            `;
-        }
+                USE KEYS "${documentId}"
+            SET ${fieldPath} = ${valueString}
+        `;
 
-        // Execute the query
-        await this.sendRequest(queryN1QL);
+        await this.sendRequest(queryN1QL)
     }
 
     /**
