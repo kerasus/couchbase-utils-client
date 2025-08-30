@@ -266,6 +266,41 @@ export default class CouchbaseUtilsClient {
     }
 
     /**
+     * Removes a nested field from a document in Couchbase using N1QL UNSET.
+     *
+     * @param {string} collectionName - The name of the collection containing the document.
+     * @param {string} documentId - The unique ID of the document to update.
+     * @param {string} fieldPath - The dot-separated path to the nested field (e.g., "user.profile.age").
+     * @returns {Promise<void>} - Resolves when the field is removed successfully.
+     * @throws {Error} - Throws an error if the document ID is missing or if the query execution fails.
+     *
+     * @example
+     * await couchbaseClient.removeNestedField(
+     *   'userConfig',
+     *   '5',
+     *   'watch_lists.`تست1`'
+     * );
+     * // This removes the key "تست1" from "watch_lists".
+     */
+    async removeNestedField (
+        collectionName: string,
+        documentId: string,
+        fieldPath: string
+    ): Promise<void> {
+        if (!documentId) {
+            throw new Error('Document ID must be provided.')
+        }
+
+        const queryN1QL = `
+            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+                USE KEYS "${documentId}"
+            UNSET ${fieldPath}
+        `;
+
+        await this.sendRequest(queryN1QL)
+    }
+
+    /**
      * Checks for specific errors in the provided Couchbase response data and
      * attempts to handle them by invoking respective error handling methods.
      *
