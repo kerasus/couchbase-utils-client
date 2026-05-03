@@ -1,6 +1,6 @@
 {
   "name": "couchbase-utils-client",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "A CouchbaseDB client for Node.js/TypeScript",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,7 +12,11 @@
     "type": "git",
     "url": "git+https://github.com/kerasus/couchbase-utils-client"
   },
-  "keywords": ["couchbase", "n1ql", "database"],
+  "keywords": [
+    "couchbase",
+    "n1ql",
+    "database"
+  ],
   "author": "Ali Esmaeeli <a.esmaeili@asredanesh.com>",
   "contributors": [
     {
@@ -23,6 +27,9 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.7.9"
+    "axios": "^1.15.2"
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
   }
 }

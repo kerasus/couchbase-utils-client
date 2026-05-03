@@ -101,14 +101,32 @@ export default class CouchbaseUtilsClient {
 
             return this.getCouchbaseResponse(response)
         } catch (error: any) {
+
+            const status = error?.response?.status
+            const data = error?.response?.data
+
+            const isHttpAuthError = status === 401
+            const isCbAuthError =
+                data?.errors?.some((e: any) => e.code === 2120)
+
+            if (isHttpAuthError || isCbAuthError) {
+                const msg =
+                    data?.errors?.[0]?.msg ||
+                    'Couchbase authentication failed'
+
+                throw new Error(`Couchbase AUTH_FAILED: ${msg}`)
+            }
+
             if (error.response && error.response.data) {
                 console.error('Couchbase query error:', error.response.data);
                 throw error.response.data; // Throw the entire error object for further analysis
-            } else if (error instanceof Error) {
-                throw new Error(`An error occurred during the request: ${error.message}`);
-            } else {
-                throw new Error('An unknown error occurred during the request.');
             }
+
+            if (error instanceof Error) {
+                throw new Error(`An error occurred during the request: ${error.message}`);
+            }
+
+            throw new Error('An unknown error occurred during the request.');
         }
     }
 
@@ -300,24 +318,45 @@ export default class CouchbaseUtilsClient {
         await this.sendRequest(queryN1QL)
     }
 
-    /**
-     * Checks for specific errors in the provided Couchbase response data and
-     * attempts to handle them by invoking respective error handling methods.
-     *
-     * This method looks for errors in the response data, specifically scope errors
-     * (code 12021) and collection errors (code 12003). If such errors are found,
-     * it delegates the handling of these errors to appropriate helper methods
-     * (`handleScopeError` and `handleCollectionError`).
-     *
-     * @param errorData The Couchbase response object containing an `errors`
-     *                  array with error details.
-     * @returns A promise that resolves once the errors are handled or no relevant
-     *          errors are found. If errors are present, the function attempts to
-     *          handle them asynchronously.
-     */
-    async checkError (errorData: CouchbaseResponse): Promise<void> {
+/**
+ * Inspects Couchbase response errors and determines how they should be handled.
+ *
+ * This method acts as an error classifier and lightweight recovery trigger.
+ * It analyzes the `errors` array in the Couchbase response and performs
+ * specific auto-healing actions when possible.
+ *
+ * Supported error handling:
+ * - Authentication errors (code 2120):
+ *   Treated as fatal. No retry is allowed.
+ *
+ * - Scope errors (code 12021):
+ *   Automatically attempts to create the missing scope.
+ *
+ * - Collection errors (code 12003):
+ *   Automatically attempts to create the missing collection.
+ *
+ * Important behavior:
+ * - This method does NOT perform retry control logic beyond indicating
+ *   whether a retry is allowed.
+ * - It may perform side effects (such as creating missing scopes or collections).
+ * - It is the caller's responsibility to decide whether to retry based on
+ *   the returned `retry` flag.
+ *
+ * @param errorData The Couchbase response object containing an optional `errors`
+ * array with detailed error information returned from the query service.
+ *
+ * @returns A promise that resolves to an object indicating whether the
+ * operation is safe to retry (`retry: true`) or should be considered final (`retry: false`).
+ */
+    async checkError (errorData: CouchbaseResponse): Promise<{ retry: boolean }> {
         if (!errorData || !errorData.errors) {
-            return
+            return { retry: false }
+        }
+
+        // auth error (NO RETRY EVER)
+        const authError = errorData.errors.find((err) => err.code === 2120)
+        if (authError) {
+            return { retry: false }
         }
 
         // Handle Scope Error
@@ -331,6 +370,9 @@ export default class CouchbaseUtilsClient {
         if (collectionError) {
             await this.handleCollectionError(collectionError)
         }
+
+        // default: don't blindly retry
+        return { retry: false }
     }
 
     /**
