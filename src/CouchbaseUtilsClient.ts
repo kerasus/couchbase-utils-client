@@ -211,13 +211,36 @@ export default class CouchbaseUtilsClient {
             throw new Error('Document ID must be provided.')
         }
         const valueString = JSON.stringify(newValue)
+        const parts = fieldPath.split('.')
 
+        let queryN1QL: string
 
-        const queryN1QL = `
-            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
-                USE KEYS "${documentId}"
-            SET ${fieldPath} = ${valueString}
-        `;
+        if (parts.length === 1) {
+            queryN1QL = `
+                UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+                    USE KEYS "${documentId}"
+                SET ${fieldPath} = ${valueString}
+            `
+        } else {
+            let expression = valueString
+
+            for (let i = parts.length - 1; i >= 1; i--) {
+                const key = parts[i]
+                const currentPath = parts.slice(0, i).join('.')
+
+                expression = `OBJECT_PUT(
+                    IFMISSINGORNULL(${currentPath}, {}),
+                    "${key}",
+                    ${expression}
+                  )`
+            }
+
+            queryN1QL = `
+                UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+                    USE KEYS "${documentId}"
+                SET ${parts[0]} = ${expression}
+            `
+        }
 
         await this.sendRequest(queryN1QL)
     }
@@ -309,11 +332,41 @@ export default class CouchbaseUtilsClient {
             throw new Error('Document ID must be provided.')
         }
 
-        const queryN1QL = `
-            UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
-                USE KEYS "${documentId}"
-            UNSET ${fieldPath}
-        `;
+
+        const parts = fieldPath
+            .replace(/^\//, '')
+            .split('.')
+            .filter(Boolean)
+
+        const root = parts[0]
+        const keys = parts.slice(1)
+
+        let queryN1QL: string
+
+        // CASE 1: remove top-level field
+        if (keys.length === 0) {
+            queryN1QL = `
+              UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+              USE KEYS "${documentId}"
+              UNSET \`${root}\`
+            `
+        }
+
+        // CASE 2: remove nested object key (SAFE PATH)
+        else {
+            const escapedKeys = keys.map(k => k.replace(/\\/g, '\\\\').replace(/"/g, '\\"'))
+
+            /**
+             * We rebuild OBJECT_REMOVE chain safely.
+             * Example:
+             * watch_lists = OBJECT_REMOVE(watch_lists, "key1", "key2")
+             */
+            queryN1QL = `
+              UPDATE \`${this.bucketName}\`.\`${this.scopeName}\`.\`${collectionName}\`
+              USE KEYS "${documentId}"
+              SET \`${root}\` = OBJECT_REMOVE(\`${root}\`, ${escapedKeys.map(k => `"${k}"`).join(', ')})
+            `
+        }
 
         await this.sendRequest(queryN1QL)
     }
